@@ -1,18 +1,23 @@
+# main is for setting up initial variables and instantiating objects
 import tcod
-from actions import EscapeAction, MovementAction
 from input_handlers import EventHandler
+from entity import Entity
+from engine import Engine
 
 
 def main() -> None:
     screen_width = 80  # same grid system as pygame, quadrant IV on a graph
     screen_height = 50
 
-    player_x = int(screen_width / 2)
-    player_y = int(screen_height / 2)
-
     tileset = tcod.tileset.load_tilesheet("assets\\tileset.png", 32, 8, tcod.tileset.CHARMAP_TCOD)  # sets font to use
 
     event_handler = EventHandler()
+
+    player = Entity(int(screen_width / 2) - 5, int(screen_height / 2), "@", (255, 255, 255))
+    npc = Entity(int(screen_width / 2) + 5, int(screen_height / 2), "@", (255, 135, 0))
+    entities = {npc, player}  # set (unordered list) of entities to pass to the engine to draw. I cannot add the same Entity instance to the set more than once, which enforces uniqueness
+
+    engine = Engine(entities=entities, event_handler=event_handler, player=player)
 
     with tcod.context.new_terminal(  # creates the screen
         screen_width,
@@ -22,25 +27,13 @@ def main() -> None:
         vsync=True,
     ) as context:
         root_console = tcod.Console(screen_width, screen_height, order="F")
-        while True:  # game loop
-            root_console.print(x=player_x, y=player_y, string="@")  # prints the character to the screen
+        # THIS IS THE BEGINNING OF THE GAME LOOP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        while True:
+            engine.render(console=root_console, context=context)
 
-            context.present(root_console)  # updates the screen
+            events = tcod.event.wait()
 
-            root_console.clear()
-
-            for event in tcod.event.wait():
-                action = event_handler.dispatch(event)  # gets whatever action is currently being preformed, dispatch sends the event to its proper action
-
-                if action is None:
-                    continue
-
-                if isinstance(action, MovementAction):
-                    player_x += action.dx
-                    player_y += action.dy
-
-                elif isinstance(action, EscapeAction):
-                    raise SystemExit()
+            engine.handle_events(events)  # sends events to the engine to be dispacted to the correct class in "actions.py"
 
 
 if __name__ == "__main__":
